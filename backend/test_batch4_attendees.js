@@ -1,6 +1,7 @@
 require('dotenv').config();
 const app = require('./src/app');
 const pool = require('./src/config/db');
+const signupRepository = require('./src/repositories/signupRepository');
 
 let server;
 let baseUrl;
@@ -581,6 +582,125 @@ const runTests = async () => {
     ).length;
     assert(registeredCount === 1, 'Exactly 1 attendee with status REGISTERED in Opp 2');
     assert(cancelledCount === 1, 'Exactly 1 attendee with status CANCELLED in Opp 2');
+
+    console.log(`\n${colors.cyan}--- 7. CONCURRENCY SAFETY & EDGE CASES ON REACTIVATION ---${colors.reset}`);
+
+    // Test 19: Missing signup on reactivation returns 404
+    const notFoundReactivateRes = await fetch(`${baseUrl}/api/signups/${fakeUuid}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenCoordA}`,
+      },
+      body: JSON.stringify({ status: 'REGISTERED' }),
+    });
+    assert(
+      notFoundReactivateRes.status === 404,
+      'Reactivating non-existent signup returns 404 Not Found'
+    );
+
+    // Test 20: Concurrency safety at capacity boundary
+    // Create Opportunity 4 with capacity = 2
+    const opp4Id = await createOpp(tokenCoordA, orgIdA, 'Concurrent Reactivation Test', 2);
+    assert(opp4Id, 'Created Opportunity 4 with capacity = 2 for concurrency testing');
+
+    // Alice and Bob sign up (2/2 spots filled)
+    const aliceOpp4Signup = await signupVolunteer(tokenAlice, opp4Id);
+    const bobOpp4Signup = await signupVolunteer(tokenBob, opp4Id);
+    const aliceOpp4Id = aliceOpp4Signup.body.data?.signup?.id;
+    const bobOpp4Id = bobOpp4Signup.body.data?.signup?.id;
+    assert(aliceOpp4Id && bobOpp4Id, 'Alice and Bob signed up for Opportunity 4 (2/2 filled)');
+
+    // Coordinator cancels both Alice and Bob (0/2 spots filled)
+    const cancelAliceOpp4 = await fetch(`${baseUrl}/api/signups/${aliceOpp4Id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenCoordA}`,
+      },
+      body: JSON.stringify({ status: 'CANCELLED' }),
+    });
+    const cancelBobOpp4 = await fetch(`${baseUrl}/api/signups/${bobOpp4Id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenCoordA}`,
+      },
+      body: JSON.stringify({ status: 'CANCELLED' }),
+    });
+    assert(cancelAliceOpp4.status === 200 && cancelBobOpp4.status === 200, 'Both Alice and Bob cancelled (0/2 filled)');
+
+    // Charlie signs up, filling 1 spot (1/2 filled, exactly 1 spot remains)
+    const charlieOpp4Signup = await signupVolunteer(tokenCharlie, opp4Id);
+    assert(charlieOpp4Signup.status === 201, 'Charlie signed up for Opportunity 4 (1/2 filled, 1 spot remaining)');
+
+    // Fire simultaneous overlapping reactivation requests for Alice and Bob
+    const [concurrentResAlice, concurrentResBob] = await Promise.all([
+      fetch(`${baseUrl}/api/signups/${aliceOpp4Id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenCoordA}`,
+        },
+        body: JSON.stringify({ status: 'REGISTERED' }),
+      }),
+      fetch(`${baseUrl}/api/signups/${bobOpp4Id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenCoordA}`,
+        },
+        body: JSON.stringify({ status: 'REGISTERED' }),
+      }),
+    ]);
+
+    const statuses = [concurrentResAlice.status, concurrentResBob.status];
+    const has200 = statuses.includes(200);
+    const has409 = statuses.includes(409);
+    assert(
+      has200 && has409,
+      'Under concurrent reactivation at capacity limit, exactly one request gets 200 OK and one gets 409 Conflict'
+    );
+
+    // Verify opportunity active signups in database never exceeded capacity of 2
+    const opp4RosterRes = await fetch(`${baseUrl}/api/opportunities/${opp4Id}/signups`, {
+      headers: { Authorization: `Bearer ${tokenCoordA}` },
+    });
+    const opp4RosterData = await opp4RosterRes.json();
+    const opp4Attendees = opp4RosterData.data?.signups || opp4RosterData.data?.attendees;
+    const opp4ActiveCount = opp4Attendees.filter(
+      (a) => (a.status || a.signup_status) === 'REGISTERED'
+    ).length;
+    assert(
+      opp4ActiveCount === 2,
+      'Final active attendee count equals exactly 2 and never exceeds opportunity capacity'
+    );
+
+    // Verify the rejected volunteer remains CANCELLED
+    const loserSignupId = concurrentResAlice.status === 409 ? aliceOpp4Id : bobOpp4Id;
+    const loserDetailRes = await fetch(`${baseUrl}/api/signups/${loserSignupId}`, {
+      headers: { Authorization: `Bearer ${tokenCoordA}` },
+    });
+    const loserDetailData = await loserDetailRes.json();
+    assert(
+      loserDetailData.data?.signup?.status === 'CANCELLED',
+      'The volunteer rejected due to capacity limit remains with status CANCELLED'
+    );
+
+    // Test 21: Relational integrity check: Mismatched signupId and opportunityId returns 404
+    let mismatchError = null;
+    try {
+      // Pass Alice's Opportunity 4 signup ID, but mismatched Opportunity 1 ID
+      await signupRepository.reactivateSignupTransaction(aliceOpp4Id, opp1Id);
+    } catch (err) {
+      mismatchError = err;
+    }
+    assert(
+      mismatchError &&
+        mismatchError.statusCode === 404 &&
+        mismatchError.message === 'Signup not found',
+      'reactivateSignupTransaction throws 404 Signup not found when signup does not belong to opportunity'
+    );
 
   } catch (err) {
     console.error(`\n${colors.red}Unexpected error in test execution:${colors.reset}`, err);
