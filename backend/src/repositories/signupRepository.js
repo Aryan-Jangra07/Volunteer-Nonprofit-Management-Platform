@@ -40,13 +40,16 @@ const createSignupTransaction = async (opportunityId, volunteerId) => {
       );
     }
 
-    // 3. Check for duplicate signup by this volunteer
+    // 3. Check for existing signup by this volunteer
     const dupQuery = `
-      SELECT id FROM signups
+      SELECT id, status FROM signups
       WHERE volunteer_id = $1 AND opportunity_id = $2
     `;
     const dupResult = await client.query(dupQuery, [volunteerId, opportunityId]);
-    if (dupResult.rows.length > 0) {
+    const existingSignup = dupResult.rows[0];
+
+    // If an active (non-cancelled) signup already exists, reject as duplicate
+    if (existingSignup && existingSignup.status !== 'CANCELLED') {
       throw new AppError(
         'You have already signed up for this opportunity.',
         409
@@ -69,19 +72,37 @@ const createSignupTransaction = async (opportunityId, volunteerId) => {
       );
     }
 
-    // 5. Insert signup with status REGISTERED
-    const insertQuery = `
-      INSERT INTO signups (volunteer_id, opportunity_id, status)
-      VALUES ($1, $2, 'REGISTERED')
-      RETURNING id, volunteer_id, opportunity_id, status, created_at, updated_at
-    `;
-    const insertResult = await client.query(insertQuery, [
-      volunteerId,
-      opportunityId,
-    ]);
+    // 5. Insert new signup or reactivate existing cancelled signup
+    let signupRecord;
+    if (existingSignup) {
+      // Reactivate cancelled signup reusing existing record (preserves unique constraint)
+      const updateQuery = `
+        UPDATE signups
+        SET status = 'REGISTERED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND opportunity_id = $2
+        RETURNING id, volunteer_id, opportunity_id, status, created_at, updated_at
+      `;
+      const updateResult = await client.query(updateQuery, [
+        existingSignup.id,
+        opportunityId,
+      ]);
+      signupRecord = updateResult.rows[0];
+    } else {
+      // Insert new signup with status REGISTERED
+      const insertQuery = `
+        INSERT INTO signups (volunteer_id, opportunity_id, status)
+        VALUES ($1, $2, 'REGISTERED')
+        RETURNING id, volunteer_id, opportunity_id, status, created_at, updated_at
+      `;
+      const insertResult = await client.query(insertQuery, [
+        volunteerId,
+        opportunityId,
+      ]);
+      signupRecord = insertResult.rows[0];
+    }
 
     await client.query('COMMIT');
-    return insertResult.rows[0];
+    return signupRecord;
   } catch (err) {
     await client.query('ROLLBACK');
     if (
