@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getMyHoursApi, getMyHoursSummaryApi } from '../../services/api'
+import { formatDate } from '../../utils/format'
 import './VolunteerHours.css'
+
+const STATUS_CLASS = { PENDING: 'badge-pending', RECORDED: 'badge-recorded', VERIFIED: 'badge-verified' }
 
 function VolunteerHours() {
   const { user, token, isAuthenticated, loading: authLoading } = useAuth()
@@ -34,9 +37,7 @@ function VolunteerHours() {
   }, [token])
 
   useEffect(() => {
-    if (token && user?.role === 'VOLUNTEER') {
-      loadData()
-    }
+    if (token && user?.role === 'VOLUNTEER') loadData()
   }, [token, user, loadData])
 
   if (authLoading) {
@@ -66,15 +67,6 @@ function VolunteerHours() {
     loadData()
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A'
-    try {
-      return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    } catch { return dateStr }
-  }
-
-  const statusClass = { PENDING: 'badge-pending', RECORDED: 'badge-recorded', VERIFIED: 'badge-verified' }
-
   const totalHours = summary?.total_hours ?? 0
   const verifiedHours = summary?.verified_hours ?? 0
   const pendingHours = summary?.pending_hours ?? 0
@@ -91,59 +83,35 @@ function VolunteerHours() {
           <Link to="/my-signups" className="btn btn-secondary">View My Signups</Link>
         </header>
 
-        {/* Summary Cards */}
         <section className="hours-summary-grid">
-          <div className="hours-stat-card">
-            <div className="stat-icon">⏱️</div>
-            <div className="stat-value">{Number(totalHours).toFixed(1)}</div>
-            <div className="stat-label">Total Hours</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">✅</div>
-            <div className="stat-value">{Number(verifiedHours).toFixed(1)}</div>
-            <div className="stat-label">Verified Hours</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">🕐</div>
-            <div className="stat-value">{Number(pendingHours).toFixed(1)}</div>
-            <div className="stat-label">Pending / Recorded</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">📋</div>
-            <div className="stat-value">{recordedCount}</div>
-            <div className="stat-label">Hour Records</div>
-          </div>
+          {[
+            { icon: '⏱️', value: Number(totalHours).toFixed(1), label: 'Total Hours' },
+            { icon: '✅', value: Number(verifiedHours).toFixed(1), label: 'Verified Hours' },
+            { icon: '🕐', value: Number(pendingHours).toFixed(1), label: 'Pending / Recorded' },
+            { icon: '📋', value: recordedCount, label: 'Hour Records' },
+          ].map(({ icon, value, label }) => (
+            <div key={label} className="hours-stat-card">
+              <div className="stat-icon">{icon}</div>
+              <div className="stat-value">{value}</div>
+              <div className="stat-label">{label}</div>
+            </div>
+          ))}
         </section>
 
-        {/* Date Filter */}
         <section className="hours-filter-section">
           <form className="hours-filter-form" onSubmit={handleFilter}>
             <div className="filter-group">
               <label htmlFor="fromDate">From Date</label>
-              <input
-                type="date"
-                id="fromDate"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                max={toDate || undefined}
-              />
+              <input type="date" id="fromDate" value={fromDate} onChange={(e) => setFromDate(e.target.value)} max={toDate || undefined} />
             </div>
             <div className="filter-group">
               <label htmlFor="toDate">To Date</label>
-              <input
-                type="date"
-                id="toDate"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                min={fromDate || undefined}
-              />
+              <input type="date" id="toDate" value={toDate} onChange={(e) => setToDate(e.target.value)} min={fromDate || undefined} />
             </div>
             <div className="filter-actions">
               <button type="submit" className="btn btn-primary btn-sm">Apply Filter</button>
               {filterApplied && (
-                <button type="button" className="btn btn-outline btn-sm" onClick={handleClearFilter}>
-                  Clear
-                </button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={handleClearFilter}>Clear</button>
               )}
             </div>
           </form>
@@ -170,11 +138,10 @@ function VolunteerHours() {
                 ? 'No volunteer hours found for the selected date range.'
                 : 'You have no volunteer hours recorded. Attend events and coordinators will log your hours.'}
             </p>
-            {filterApplied ? (
-              <button type="button" className="btn btn-secondary" onClick={handleClearFilter}>Clear Filter</button>
-            ) : (
-              <Link to="/opportunities" className="btn btn-primary">Browse Opportunities</Link>
-            )}
+            {filterApplied
+              ? <button type="button" className="btn btn-secondary" onClick={handleClearFilter}>Clear Filter</button>
+              : <Link to="/opportunities" className="btn btn-primary">Browse Opportunities</Link>
+            }
           </div>
         ) : (
           <section className="hours-table-section">
@@ -207,7 +174,7 @@ function VolunteerHours() {
                       <td>{record.organization_name || '—'}</td>
                       <td className="hours-cell">{Number(record.hours || 0).toFixed(1)}</td>
                       <td>
-                        <span className={'hours-badge ' + (statusClass[record.status] || '')}>
+                        <span className={`hours-badge ${STATUS_CLASS[record.status] || ''}`}>
                           {record.status || 'RECORDED'}
                         </span>
                       </td>

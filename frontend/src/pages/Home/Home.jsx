@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import OpportunityCard from '../../components/OpportunityCard'
 import { useOpportunities } from '../../context/OpportunityContext'
 import { MOCK_OPPORTUNITIES } from '../Opportunities/mockOpportunities'
+import { formatDate } from '../../utils/format'
 import './Home.css'
 
 function Home() {
@@ -14,10 +15,15 @@ function Home() {
 
   const [activeStep, setActiveStep] = useState(0)
   const [journeyProgress, setJourneyProgress] = useState(1)
-  const [heroScrollOffset, setHeroScrollOffset] = useState(0)
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
     const revealElements = document.querySelectorAll('.reveal, .reveal-left, .reveal-right')
+    if (prefersReducedMotion) {
+      revealElements.forEach((el) => el.classList.add('reveal-visible'))
+    }
+
     const revealObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -28,7 +34,9 @@ function Home() {
       },
       { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
     )
-    revealElements.forEach((el) => revealObserver.observe(el))
+    if (!prefersReducedMotion) {
+      revealElements.forEach((el) => revealObserver.observe(el))
+    }
 
     const stepItems = document.querySelectorAll('.editorial-step-item')
     const stepObserver = new IntersectionObserver(
@@ -46,13 +54,8 @@ function Home() {
     )
     stepItems.forEach((el) => stepObserver.observe(el))
 
+    const journeySec = document.getElementById('journey-section')
     const handleScroll = () => {
-      const scrollY = window.scrollY
-      if (scrollY < 800) {
-        setHeroScrollOffset(scrollY * 0.12)
-      }
-
-      const journeySec = document.getElementById('journey-section')
       if (journeySec) {
         const rect = journeySec.getBoundingClientRect()
         const windowHeight = window.innerHeight
@@ -74,7 +77,6 @@ function Home() {
 
   return (
     <main className="home-canvas">
-      {/* 1. HERO — CLEAN EDITORIAL SHOWCASE */}
       <section className="hero-editorial">
         <div className="section-container hero-grid">
           <div className="hero-left">
@@ -89,7 +91,7 @@ function Home() {
             </h1>
 
             <p className="hero-description">
-              ServeHub connects passionate volunteers directly with verified non-profits. Discover meaningful local events where your skills drive real, lasting social good.
+              ServeHub connects volunteers with nonprofit organizations. Discover local opportunities, register for events, and track your volunteering hours in one place.
             </p>
 
             <div className="hero-action-row">
@@ -102,18 +104,12 @@ function Home() {
             </div>
           </div>
 
-          <div
-            className="hero-right"
-            style={{ transform: `translateY(-${heroScrollOffset}px)`, opacity: 1 - heroScrollOffset * 0.0012 }}
-          >
+          <div className="hero-right">
             <div className="hero-product-showcase">
               <div className="showcase-top-bar">
                 <span className="showcase-category">{heroFeatured.category || 'Community'}</span>
                 <span className="showcase-date-badge">
-                  {heroFeatured.date ||
-                    (heroFeatured.event_date
-                      ? new Date(heroFeatured.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : 'Upcoming')}
+                  {heroFeatured.date || (heroFeatured.event_date ? formatDate(heroFeatured.event_date) : 'Upcoming')}
                 </span>
               </div>
 
@@ -128,7 +124,7 @@ function Home() {
                 <div className="showcase-meta-grid">
                   <div className="meta-item">
                     <span className="meta-label">Location</span>
-                    <span className="meta-val">📍 {heroFeatured.location || 'TBD'}</span>
+                    <span className="meta-val">{heroFeatured.location || 'TBD'}</span>
                   </div>
                   <div className="meta-item">
                     <span className="meta-label">Availability</span>
@@ -149,7 +145,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 2. BIG VISUAL STATEMENT SECTION */}
       <section className="statement-section">
         <div className="section-container">
           <div className="statement-content reveal">
@@ -164,7 +159,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 3. IMPACT JOURNEY TIMELINE STRIP */}
       <section id="journey-section" className="journey-section reveal">
         <div className="section-container">
           <div className="journey-header">
@@ -213,7 +207,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 4. OPPORTUNITIES MAGAZINE / EDITORIAL SHOWCASE */}
       <section id="opportunities" className="editorial-showcase-section reveal">
         <div className="section-container">
           <div className="showcase-header-row">
@@ -243,7 +236,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 5. INTERACTIVE COMMUNITY EQUATION SECTION */}
       <section className="community-equation-section reveal">
         <div className="section-container">
           <div className="equation-canvas">
@@ -263,7 +255,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 6. HOW IT WORKS (VERTICAL EDITORIAL SEQUENCE) */}
       <section id="how-it-works" className="editorial-works-section reveal">
         <div className="section-container">
           <div className="works-header">
@@ -291,9 +282,9 @@ function Home() {
             >
               <div className="step-num-col">02</div>
               <div className="step-content-col">
-                <h3>Show up for a cause</h3>
+                <h3>Sign up and show up</h3>
                 <p>
-                  Register with one click to lock in your spot. Receive detailed logistics, location pins, and contact details from the NGO event coordinator.
+                  Register for the opportunity to confirm your spot. Check the event details, location, and time — then show up and contribute.
                 </p>
               </div>
             </div>
@@ -304,9 +295,9 @@ function Home() {
             >
               <div className="step-num-col">03</div>
               <div className="step-content-col">
-                <h3>Track your impact</h3>
+                <h3>Track your hours</h3>
                 <p>
-                  Attend sessions, contribute your time, and automatically accumulate a verified profile log of hours and community initiatives completed.
+                  After the event, coordinators log your volunteer hours. View your history and build a personal record of community contributions.
                 </p>
               </div>
             </div>
@@ -314,7 +305,6 @@ function Home() {
         </div>
       </section>
 
-      {/* 7. RESTRAINED EDITORIAL FINAL CTA */}
       <section className="final-cta-section reveal">
         <div className="section-container">
           <div className="editorial-cta-canvas">

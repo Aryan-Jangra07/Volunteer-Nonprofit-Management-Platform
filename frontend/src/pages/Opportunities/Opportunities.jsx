@@ -6,7 +6,7 @@ import './Opportunities.css'
 const CATEGORIES = ['All', 'Hunger & Food', 'Education', 'Environment', 'Animal Welfare', 'Community Support']
 
 function Opportunities() {
-  const { opportunities, loading, error, usingMock } = useOpportunities()
+  const { opportunities, loading, error } = useOpportunities()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [location, setLocation] = useState('All')
@@ -44,11 +44,6 @@ function Opportunities() {
         <header className="opportunities-header">
           <h1>Volunteer Opportunities</h1>
           <p>Discover meaningful ways to give back, support local causes, and make a real difference.</p>
-          {usingMock && (
-            <p className="mock-notice" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted, #888)', marginTop: '0.25rem' }}>
-              Showing sample opportunities — connect the backend to see live listings.
-            </p>
-          )}
         </header>
 
         <section className="filter-bar">

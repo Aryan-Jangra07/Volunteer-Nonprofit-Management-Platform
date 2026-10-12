@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { OpportunityProvider } from './context/OpportunityContext'
@@ -18,6 +18,8 @@ import ManageOpportunities from './pages/ManageOpportunities/ManageOpportunities
 import VolunteerHours from './pages/VolunteerHours/VolunteerHours'
 import CoordinatorHours from './pages/CoordinatorHours/CoordinatorHours'
 import OpportunityAttendees from './pages/OpportunityAttendees/OpportunityAttendees'
+import Privacy from './pages/Privacy/Privacy'
+import Terms from './pages/Terms/Terms'
 import './App.css'
 
 function App() {
@@ -56,6 +58,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
           </Routes>
           <Footer />
         </div>

@@ -6,9 +6,6 @@ import OpportunityCard from '../../components/OpportunityCard'
 import { getDashboardStatsApi } from '../../services/api'
 import './Dashboard.css'
 
-const DEFAULT_VOLUNTEER_STATS = { upcoming_count: 0, completed_count: 0, total_hours: 0 }
-const DEFAULT_COORDINATOR_STATS = { organizations_count: 0, active_opportunities: 0, total_volunteers_registered: 0 }
-
 function Dashboard() {
   const { user, token, isAuthenticated, loading: authLoading } = useAuth()
   const { opportunities, loading: oppsLoading } = useOpportunities()
@@ -18,7 +15,6 @@ function Dashboard() {
   const [statsError, setStatsError] = useState(null)
 
   const isCoordinator = user?.role === 'COORDINATOR'
-  const featuredOpportunities = opportunities.slice(0, 3)
 
   useEffect(() => {
     if (!token) return
@@ -26,14 +22,10 @@ function Dashboard() {
     setStatsError(null)
     getDashboardStatsApi(token)
       .then((res) => setStats(res?.data?.stats || null))
-      .catch((err) => {
-        setStats(null)
-        setStatsError(err.message || 'Failed to load live statistics')
-      })
+      .catch((err) => setStatsError(err.message || 'Failed to load live statistics'))
       .finally(() => setStatsLoading(false))
   }, [token])
 
-  // Wait for auth initialization before rendering or redirecting
   if (authLoading) {
     return (
       <main className="dashboard-page">
@@ -45,64 +37,26 @@ function Dashboard() {
     )
   }
 
-  // Auth Protection: Redirect unauthenticated users to login
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />
-  }
+  if (!isAuthenticated || !user) return <Navigate to="/login" replace />
 
-  const userName = user.full_name || 'Volunteer'
-
-  // Normalise stats into display-friendly values
-  const resolvedStats = stats || (isCoordinator ? DEFAULT_COORDINATOR_STATS : DEFAULT_VOLUNTEER_STATS)
-
+  const s = stats || {}
   const summaryCards = isCoordinator
     ? [
-        {
-          icon: '🏢',
-          label: 'Organizations',
-          value: resolvedStats.organizations_count ?? 0,
-          caption: 'Organizations you manage',
-        },
-        {
-          icon: '📋',
-          label: 'Active Opportunities',
-          value: resolvedStats.active_opportunities ?? 0,
-          caption: 'Published live opportunities',
-        },
-        {
-          icon: '👥',
-          label: 'Volunteers Registered',
-          value: resolvedStats.total_volunteers_registered ?? 0,
-          caption: 'Total sign-ups across your opportunities',
-        },
+        { icon: '🏢', label: 'Organizations', value: s.organizations_count ?? 0, caption: 'Organizations you manage' },
+        { icon: '📋', label: 'Active Opportunities', value: s.active_opportunities ?? 0, caption: 'Published live opportunities' },
+        { icon: '👥', label: 'Volunteers Registered', value: s.total_volunteers_registered ?? 0, caption: 'Total sign-ups across your opportunities' },
       ]
     : [
-        {
-          icon: '📅',
-          label: 'Upcoming Opportunities',
-          value: resolvedStats.upcoming_count ?? 0,
-          caption: 'Scheduled events & commitments',
-        },
-        {
-          icon: '✅',
-          label: 'Completed Opportunities',
-          value: resolvedStats.completed_count ?? 0,
-          caption: 'Past events attended',
-        },
-        {
-          icon: '⏱️',
-          label: 'Volunteer Hours',
-          value: `${resolvedStats.total_hours ?? 0} hrs`,
-          caption: 'Total verified contribution time',
-        },
+        { icon: '📅', label: 'Upcoming Opportunities', value: s.upcoming_count ?? 0, caption: 'Scheduled events & commitments' },
+        { icon: '✅', label: 'Completed Opportunities', value: s.completed_count ?? 0, caption: 'Past events attended' },
+        { icon: '⏱️', label: 'Volunteer Hours', value: `${s.total_hours ?? 0} hrs`, caption: 'Total verified contribution time' },
       ]
 
   return (
     <main className="dashboard-page">
       <div className="dashboard-container">
-        {/* Welcome Banner */}
         <section className="dashboard-welcome">
-          <h1>Welcome back, {userName} 👋</h1>
+          <h1>Welcome back, {user.full_name || 'Volunteer'} 👋</h1>
           <p>
             {isCoordinator
               ? 'Here is an overview of your organizations and volunteer engagement.'
@@ -110,13 +64,8 @@ function Dashboard() {
           </p>
         </section>
 
-        {statsError && (
-          <div className="alert-error" style={{ marginBottom: '0.5rem' }}>
-            {statsError}
-          </div>
-        )}
+        {statsError && <div className="alert-error" style={{ marginBottom: '0.5rem' }}>{statsError}</div>}
 
-        {/* Summary Cards Grid */}
         <section className="dashboard-summary">
           {summaryCards.map(({ icon, label, value, caption }) => (
             <div key={label} className="summary-card">
@@ -132,7 +81,6 @@ function Dashboard() {
           ))}
         </section>
 
-        {/* Quick Actions */}
         <section className="dashboard-actions-card">
           <h2>Quick Actions</h2>
           <p>
@@ -144,37 +92,22 @@ function Dashboard() {
             <Link to={isCoordinator ? '/manage-opportunities' : '/opportunities'} className="btn btn-primary">
               {isCoordinator ? 'Manage Opportunities' : 'Browse Opportunities'}
             </Link>
-            {!isCoordinator && (
-              <Link to="/my-signups" className="btn btn-secondary">
-                My Signups
-              </Link>
-            )}
-            {!isCoordinator && (
-              <Link to="/my-hours" className="btn btn-secondary">
-                My Hours
-              </Link>
-            )}
-            {isCoordinator && (
-              <Link to="/coordinator-hours" className="btn btn-secondary">
-                Hours Management
-              </Link>
-            )}
+            {!isCoordinator && <Link to="/my-signups" className="btn btn-secondary">My Signups</Link>}
+            {!isCoordinator && <Link to="/my-hours" className="btn btn-secondary">My Hours</Link>}
+            {isCoordinator && <Link to="/coordinator-hours" className="btn btn-secondary">Hours Management</Link>}
             <Link to={isCoordinator ? '/organizations' : '/profile'} className="btn btn-outline">
               {isCoordinator ? 'My Organizations' : 'View Profile'}
             </Link>
           </div>
         </section>
 
-        {/* Featured Opportunities Section */}
         <section className="dashboard-featured">
           <div className="dashboard-featured-header">
             <div>
               <h2>Featured Opportunities</h2>
               <p>Discover upcoming ways to make a difference.</p>
             </div>
-            <Link to="/opportunities" className="btn btn-secondary">
-              View All Opportunities →
-            </Link>
+            <Link to="/opportunities" className="btn btn-secondary">View All Opportunities →</Link>
           </div>
           {oppsLoading ? (
             <div className="loading-container">
@@ -183,7 +116,7 @@ function Dashboard() {
             </div>
           ) : (
             <div className="dashboard-opportunities-grid">
-              {featuredOpportunities.map((opp) => (
+              {opportunities.slice(0, 3).map((opp) => (
                 <OpportunityCard key={opp.id} opportunity={opp} />
               ))}
             </div>

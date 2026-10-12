@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import {
-  getOrganizationHoursApi,
-  getOrganizationHoursSummaryApi,
-  updateHoursStatusApi,
-} from '../../services/api'
+import { getOrganizationHoursApi, getOrganizationHoursSummaryApi, updateHoursStatusApi } from '../../services/api'
+import { formatDate } from '../../utils/format'
 import './CoordinatorHours.css'
 
 const HOUR_STATUSES = ['PENDING', 'RECORDED', 'VERIFIED']
+const STATUS_CLASS = { PENDING: 'badge-pending', RECORDED: 'badge-recorded', VERIFIED: 'badge-verified' }
 
 function CoordinatorHours() {
   const { user, token, isAuthenticated, loading: authLoading } = useAuth()
@@ -40,9 +38,7 @@ function CoordinatorHours() {
   }, [token])
 
   useEffect(() => {
-    if (token && user?.role === 'COORDINATOR') {
-      loadData()
-    }
+    if (token && user?.role === 'COORDINATOR') loadData()
   }, [token, user, loadData])
 
   if (authLoading) {
@@ -67,7 +63,7 @@ function CoordinatorHours() {
     try {
       await updateHoursStatusApi(id, newStatus, token)
       setHours((prev) => prev.map((h) => h.id === id ? { ...h, status: newStatus } : h))
-      setUpdateSuccess('Hours status updated to ' + newStatus + '.')
+      setUpdateSuccess(`Hours status updated to ${newStatus}.`)
       setTimeout(() => setUpdateSuccess(''), 3000)
     } catch (err) {
       setUpdateError(err.message || 'Failed to update status.')
@@ -76,14 +72,6 @@ function CoordinatorHours() {
     }
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—'
-    try {
-      return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    } catch { return dateStr }
-  }
-
-  const statusClass = { PENDING: 'badge-pending', RECORDED: 'badge-recorded', VERIFIED: 'badge-verified' }
   const totalHours = summary?.total_hours ?? 0
   const verifiedHours = summary?.verified_hours ?? 0
   const totalVolunteers = summary?.total_volunteers ?? 0
@@ -100,28 +88,19 @@ function CoordinatorHours() {
           <Link to="/manage-opportunities" className="btn btn-secondary">Manage Opportunities</Link>
         </header>
 
-        {/* Summary */}
         <section className="hours-summary-grid">
-          <div className="hours-stat-card">
-            <div className="stat-icon">⏱️</div>
-            <div className="stat-value">{Number(totalHours).toFixed(1)}</div>
-            <div className="stat-label">Total Hours Logged</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">✅</div>
-            <div className="stat-value">{Number(verifiedHours).toFixed(1)}</div>
-            <div className="stat-label">Verified Hours</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">👥</div>
-            <div className="stat-value">{totalVolunteers}</div>
-            <div className="stat-label">Volunteers</div>
-          </div>
-          <div className="hours-stat-card">
-            <div className="stat-icon">📋</div>
-            <div className="stat-value">{totalRecords}</div>
-            <div className="stat-label">Hour Records</div>
-          </div>
+          {[
+            { icon: '⏱️', value: Number(totalHours).toFixed(1), label: 'Total Hours Logged' },
+            { icon: '✅', value: Number(verifiedHours).toFixed(1), label: 'Verified Hours' },
+            { icon: '👥', value: totalVolunteers, label: 'Volunteers' },
+            { icon: '📋', value: totalRecords, label: 'Hour Records' },
+          ].map(({ icon, value, label }) => (
+            <div key={label} className="hours-stat-card">
+              <div className="stat-icon">{icon}</div>
+              <div className="stat-value">{value}</div>
+              <div className="stat-label">{label}</div>
+            </div>
+          ))}
         </section>
 
         {updateSuccess && <div className="alert-success">{updateSuccess}</div>}
@@ -181,7 +160,7 @@ function CoordinatorHours() {
                       </td>
                       <td className="hours-cell">{Number(record.hours || 0).toFixed(1)}</td>
                       <td>
-                        <span className={'hours-badge ' + (statusClass[record.status] || '')}>
+                        <span className={`hours-badge ${STATUS_CLASS[record.status] || ''}`}>
                           {record.status || 'RECORDED'}
                         </span>
                       </td>
@@ -192,10 +171,10 @@ function CoordinatorHours() {
                             <button
                               key={s}
                               type="button"
-                              className={'status-action-btn status-' + s.toLowerCase()}
+                              className={`status-action-btn status-${s.toLowerCase()}`}
                               onClick={() => handleUpdateStatus(record.id, s)}
                               disabled={!!updatingId}
-                              title={'Set to ' + s}
+                              title={`Set to ${s}`}
                             >
                               {updatingId === record.id ? '...' : s}
                             </button>

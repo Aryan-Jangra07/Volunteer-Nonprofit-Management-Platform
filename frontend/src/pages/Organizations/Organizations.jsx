@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getOrganizationsApi, createOrganizationApi } from '../../services/api'
@@ -18,7 +18,7 @@ function Organizations() {
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
 
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     if (!token) return
     setError('')
     try {
@@ -29,13 +29,11 @@ function Organizations() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     fetchOrganizations()
-  }, [token])
-
-
+  }, [fetchOrganizations])
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
     setCreateError('')
