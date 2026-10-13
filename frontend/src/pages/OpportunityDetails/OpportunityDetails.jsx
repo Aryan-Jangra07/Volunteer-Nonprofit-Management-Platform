@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useOpportunities } from '../../context/OpportunityContext'
@@ -41,36 +41,36 @@ function OpportunityDetails() {
 
   if (authLoading || loading) {
     return (
-      <main className="details-page">
+      <div className="details-page">
         <div className="loading-container">
           <div className="loading-spinner" />
           <p>Loading opportunity details...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (!isAuthenticated) {
     return (
-      <main className="details-page">
+      <div className="details-page">
         <div className="details-container not-found">
           <h2>Authentication Required</h2>
           <p>Please log in to view opportunity details.</p>
           <Link to="/login" className="btn btn-primary">Login</Link>
         </div>
-      </main>
+      </div>
     )
   }
 
   if (fetchError || !opportunity) {
     return (
-      <main className="details-page">
+      <div className="details-page">
         <div className="details-container not-found">
           <h2>Opportunity Not Found</h2>
           <p>{fetchError || 'The opportunity you are looking for does not exist or has ended.'}</p>
           <Link to="/opportunities" className="btn btn-secondary">Back to Opportunities</Link>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -119,7 +119,7 @@ function OpportunityDetails() {
   }
 
   return (
-    <main className="details-page">
+    <div className="details-page">
       <div className="details-container">
         <Link to="/opportunities" className="back-btn">Back to Opportunities</Link>
 
@@ -219,7 +219,7 @@ function OpportunityDetails() {
           </footer>
         </article>
       </div>
-    </main>
+    </div>
   )
 }
 

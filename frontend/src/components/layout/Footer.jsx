@@ -10,11 +10,8 @@ function Footer() {
         <div className="footer-brand">
           <h3>ServeHub</h3>
           <p>
-            A volunteer and nonprofit management platform. Connect with organizations, discover
-            opportunities, and track your contribution hours.
-          </p>
-          <p className="footer-dev-notice">
-            Development build &mdash; not yet publicly launched.
+            A volunteer and nonprofit management platform. Connect with organizations,
+            discover opportunities, and track your contribution hours.
           </p>
         </div>
 
@@ -41,7 +38,6 @@ function Footer() {
 
       <div className="footer-bottom">
         <p>&copy; {year} ServeHub. All rights reserved.</p>
-        <p className="footer-draft-label">Draft &mdash; legal pages require review before launch.</p>
       </div>
     </footer>
   )

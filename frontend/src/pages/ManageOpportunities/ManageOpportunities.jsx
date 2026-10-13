@@ -79,12 +79,10 @@ function ManageOpportunities({ initialMode = 'list' }) {
 
   if (authLoading) {
     return (
-      <main className="manage-opps-page">
-        <div className="loading-container">
-          <div className="loading-spinner" />
-          <p>Verifying coordinator access...</p>
-        </div>
-      </main>
+      <div className="loading-container">
+        <div className="loading-spinner" />
+        <p>Verifying coordinator access...</p>
+      </div>
     )
   }
 
@@ -210,7 +208,7 @@ function ManageOpportunities({ initialMode = 'list' }) {
   const isEditing = modal && modal !== 'create'
 
   return (
-    <main className="manage-opps-page">
+    <div className="manage-opps-page">
       <div className="manage-opps-container">
         <header className="manage-opps-header">
           <div>
@@ -471,7 +469,7 @@ function ManageOpportunities({ initialMode = 'list' }) {
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }
 

@@ -149,7 +149,7 @@
   background-color: var(--color-primary);
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(15, 98, 254, 0.3);
+  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.3);
 }
 
 .nav-link-register:active {
